@@ -1,12 +1,13 @@
 package rssworker
 
 import (
-	"bufio"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
 	"os"
 	"sync"
+
+	"github.com/yowcow/rsstools/httpworker"
 )
 
 var (
@@ -16,6 +17,7 @@ var (
 type RssItem struct {
 	Title string `xml:"title"`
 	Link  string `xml:"link"`
+	Attr  httpworker.RssAttr
 }
 
 type Rss1 struct {
@@ -28,19 +30,19 @@ type Rss2 struct {
 
 type RssQueue struct {
 	Wg  *sync.WaitGroup
-	In  chan *bufio.Reader
+	In  chan *httpworker.RssFeed
 	Out chan *RssItem
 }
 
 func (self RssQueue) Start(id int) {
 	defer self.Wg.Done()
 
-	for r := range self.In {
+	for feed := range self.In {
 		var items []*RssItem
 		rss1 := &Rss1{}
 		rss2 := &Rss2{}
 
-		rssXml, _ := ioutil.ReadAll(r)
+		rssXml, _ := ioutil.ReadAll(feed.Body)
 
 		if err := xml.Unmarshal(rssXml, rss1); err != nil {
 			fmt.Fprintf(os.Stdout, "[Rss Worker %d] Failed parsing XML %s\n", id, err)
@@ -59,6 +61,7 @@ func (self RssQueue) Start(id int) {
 		}
 
 		for _, item := range items {
+			item.Attr = feed.Attr
 			self.Out <- item
 		}
 	}

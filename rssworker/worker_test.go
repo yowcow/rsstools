@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/stretchr/testify/assert"
+	"github.com/yowcow/rsstools/httpworker"
 )
 
 var rssXml1 string = `
@@ -41,7 +42,7 @@ var rssXml2 string = `
 func TestWorker_on_rss1(t *testing.T) {
 	rssq := RssQueue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *bufio.Reader),
+		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *RssItem),
 	}
 
@@ -62,13 +63,22 @@ func TestWorker_on_rss1(t *testing.T) {
 				mx.Lock()
 				result[item.Link] += 1
 				mx.Unlock()
+
+				assert.Equal(t, false, item.Attr["foo_flg"])
+				assert.Equal(t, 1234, item.Attr["bar_count"])
 			}
 		}()
 	}
 
+	attr := httpworker.RssAttr{
+		"foo_flg":   false,
+		"bar_count": 1234,
+	}
+
 	for i := 0; i < 10; i++ {
 		r := bufio.NewReader(strings.NewReader(rssXml1))
-		rssq.In <- r
+		feed := &httpworker.RssFeed{"url", attr, r}
+		rssq.In <- feed
 	}
 
 	close(rssq.In)
@@ -84,7 +94,7 @@ func TestWorker_on_rss1(t *testing.T) {
 func TestWorker_on_rss2(t *testing.T) {
 	rssq := RssQueue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *bufio.Reader),
+		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *RssItem),
 	}
 
@@ -105,13 +115,22 @@ func TestWorker_on_rss2(t *testing.T) {
 				mx.Lock()
 				result[item.Link] += 1
 				mx.Unlock()
+
+				assert.Equal(t, true, item.Attr["foo_flg"])
+				assert.Equal(t, 1234, item.Attr["bar_count"])
 			}
 		}()
 	}
 
+	attr := httpworker.RssAttr{
+		"foo_flg":   true,
+		"bar_count": 1234,
+	}
+
 	for i := 0; i < 10; i++ {
 		r := bufio.NewReader(strings.NewReader(rssXml2))
-		rssq.In <- r
+		feed := &httpworker.RssFeed{"url", attr, r}
+		rssq.In <- feed
 	}
 
 	close(rssq.In)
