@@ -3,6 +3,7 @@ package httpworker
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"sync"
@@ -18,7 +19,7 @@ type RssAttr map[string]interface{}
 type RssFeed struct {
 	Url  string
 	Attr RssAttr
-	Body *bufio.Reader
+	Body io.Reader
 }
 
 type HttpQueue struct {
