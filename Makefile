@@ -3,6 +3,7 @@
 all:
 	make -C httpworker
 	make -C rssworker
+	make -C logworker
 
 test:
-	go test -v ./httpworker ./rssworker
+	go test -v ./httpworker ./rssworker ./logworker
