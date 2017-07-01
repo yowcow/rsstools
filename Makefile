@@ -6,4 +6,4 @@ all:
 	make -C logworker
 
 test:
-	go test -v ./httpworker ./rssworker ./logworker
+	go test -v ./httpworker ./rssworker ./logworker ./ircworker

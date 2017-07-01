@@ -9,6 +9,7 @@ before_script:
   - make restore -C ./httpworker
   - make restore -C ./rssworker
   - make restore -C ./logworker
+  - make restore -C ./ircworker
 
 script:
   - make test
