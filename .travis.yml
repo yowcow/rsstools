@@ -6,10 +6,7 @@ go:
 
 before_script:
   - go get github.com/tools/godep
-  - make restore -C ./httpworker
-  - make restore -C ./rssworker
-  - make restore -C ./logworker
-  - make restore -C ./ircworker
+  - godep restore -v
 
 script:
   - make test
