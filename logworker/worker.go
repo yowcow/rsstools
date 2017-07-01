@@ -21,9 +21,10 @@ var (
 )
 
 type LogQueue struct {
-	Wg  *sync.WaitGroup
-	In  chan *rssworker.RssItem
-	Out io.Writer
+	Wg     *sync.WaitGroup
+	In     chan *rssworker.RssItem
+	Out    chan *rssworker.RssItem
+	Writer io.Writer
 }
 
 func (self LogQueue) Start(id int) {
@@ -34,7 +35,11 @@ func (self LogQueue) Start(id int) {
 			fmt.Fprintf(os.Stdout, "[Log Worker %d] Got %s (%s)\n", id, item.Title, item.Link)
 		}
 
-		WriteLog(self.Out, item)
+		WriteLog(self.Writer, item)
+
+		if self.Out != nil {
+			self.Out <- item
+		}
 	}
 }
 
