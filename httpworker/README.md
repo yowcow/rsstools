@@ -1,7 +1,10 @@
 HTTP Get Request Worker
 =======================
 
-Worker to read RSS feed object `*httpworker.RssFeed` from channel `In`, append response body `io.Reader` to the object, and writes the object to channel `Out`.
+A worker that:
++ reads RSS feed object `*httpworker.RssFeed` from channel `In`
++ makes HTTP GET request and appends response body `io.Reader` to the object
++ writes the object to channel `Out`
 
 HOW TO USE
 ----------

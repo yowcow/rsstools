@@ -3,4 +3,8 @@
 RSS Tools
 =========
 
-Some tools when aggregating RSS feeds.
+A chain of tools to:
+
++ aggregate RSS feeds
++ parse RSS feeds
++ process items in the feed
