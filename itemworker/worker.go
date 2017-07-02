@@ -13,11 +13,11 @@ type ItemQueue struct {
 	Task func(*rssworker.RssItem) bool
 }
 
-func (self ItemQueue) Start() {
+func (self ItemQueue) Start(id int) {
 	defer self.Wg.Done()
 
 	for item := range self.In {
-		if self.Task(item) {
+		if self.Task(item) && self.Out != nil {
 			self.Out <- item
 		}
 	}

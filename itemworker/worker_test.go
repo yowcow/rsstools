@@ -20,7 +20,7 @@ func TestWorker_writes_to_out_chan(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
 		q.Wg.Add(1)
-		go q.Start()
+		go q.Start(i + 1)
 	}
 
 	wg := &sync.WaitGroup{}
@@ -63,7 +63,7 @@ func TestWorker_no_write_to_out_chan(t *testing.T) {
 
 	for i := 0; i < 4; i++ {
 		q.Wg.Add(1)
-		go q.Start()
+		go q.Start(i + 1)
 	}
 
 	wg := &sync.WaitGroup{}
