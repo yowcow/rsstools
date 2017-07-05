@@ -20,15 +20,15 @@ func TestWorker(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httphandler))
 	defer server.Close()
 
-	httpq := HttpQueue{
+	q := Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *RssFeed),
 		Out: make(chan *RssFeed),
 	}
 
 	for i := 0; i < 4; i++ {
-		httpq.Wg.Add(1)
-		go httpq.Start(i + 1)
+		q.Wg.Add(1)
+		go q.Start(i + 1)
 	}
 
 	count := 0
@@ -39,7 +39,7 @@ func TestWorker(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for feed := range httpq.Out {
+			for feed := range q.Out {
 				mx.Lock()
 				count += 1
 				mx.Unlock()
@@ -63,13 +63,13 @@ func TestWorker(t *testing.T) {
 			Url:  server.URL,
 			Attr: attr,
 		}
-		httpq.In <- feed
+		q.In <- feed
 	}
 
-	close(httpq.In)
-	httpq.Wg.Wait()
+	close(q.In)
+	q.Wg.Wait()
 
-	close(httpq.Out)
+	close(q.Out)
 	wg.Wait()
 
 	assert.Equal(t, 20, count)

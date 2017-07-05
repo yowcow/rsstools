@@ -15,8 +15,8 @@ var feedUrls = []string{
 	"https://news.yahoo.co.jp/pickup/rss.xml",
 }
 
-func httpQueue(workers int) httpworker.HttpQueue {
-	q := httpworker.HttpQueue{
+func httpQueue(workers int) httpworker.Queue {
+	q := httpworker.Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *httpworker.RssFeed),
@@ -28,8 +28,8 @@ func httpQueue(workers int) httpworker.HttpQueue {
 	return q
 }
 
-func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.RssQueue {
-	q := rssworker.RssQueue{
+func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.Queue {
+	q := rssworker.Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  in,
 		Out: make(chan *rssworker.RssItem),
@@ -41,8 +41,8 @@ func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.RssQueue {
 	return q
 }
 
-func logQueue(workers int, in chan *rssworker.RssItem) itemworker.ItemQueue {
-	q := itemworker.ItemQueue{
+func logQueue(workers int, in chan *rssworker.RssItem) itemworker.Queue {
+	q := itemworker.Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  in,
 		Out: make(chan *rssworker.RssItem),
@@ -58,9 +58,9 @@ func logQueue(workers int, in chan *rssworker.RssItem) itemworker.ItemQueue {
 	return q
 }
 
-func countQueue(workers int, in chan *rssworker.RssItem, count *int) itemworker.ItemQueue {
+func countQueue(workers int, in chan *rssworker.RssItem, count *int) itemworker.Queue {
 	mx := &sync.Mutex{}
-	q := itemworker.ItemQueue{
+	q := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
 		In: in,
 		Task: func(item *rssworker.RssItem) bool {

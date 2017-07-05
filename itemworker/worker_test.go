@@ -9,7 +9,7 @@ import (
 )
 
 func TestWorker_writes_to_out_chan(t *testing.T) {
-	q := ItemQueue{
+	q := Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *rssworker.RssItem),
 		Out: make(chan *rssworker.RssItem),
@@ -52,7 +52,7 @@ func TestWorker_writes_to_out_chan(t *testing.T) {
 }
 
 func TestWorker_no_write_to_out_chan(t *testing.T) {
-	q := ItemQueue{
+	q := Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *rssworker.RssItem),
 		Out: make(chan *rssworker.RssItem),

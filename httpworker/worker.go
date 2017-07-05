@@ -22,13 +22,13 @@ type RssFeed struct {
 	Body io.Reader
 }
 
-type HttpQueue struct {
+type Queue struct {
 	Wg  *sync.WaitGroup
 	In  chan *RssFeed
 	Out chan *RssFeed
 }
 
-func (self HttpQueue) Start(id int) {
+func (self Queue) Start(id int) {
 	defer self.Wg.Done()
 
 	client := &http.Client{}

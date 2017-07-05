@@ -28,13 +28,13 @@ type Rss2 struct {
 	Channel *Rss1 `xml:"channel"`
 }
 
-type RssQueue struct {
+type Queue struct {
 	Wg  *sync.WaitGroup
 	In  chan *httpworker.RssFeed
 	Out chan *RssItem
 }
 
-func (self RssQueue) Start(id int) {
+func (self Queue) Start(id int) {
 	defer self.Wg.Done()
 
 	for feed := range self.In {

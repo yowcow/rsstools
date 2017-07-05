@@ -6,14 +6,14 @@ import (
 	"github.com/yowcow/rsstools/rssworker"
 )
 
-type ItemQueue struct {
+type Queue struct {
 	Wg   *sync.WaitGroup
 	In   chan *rssworker.RssItem
 	Out  chan *rssworker.RssItem
 	Task func(*rssworker.RssItem) bool
 }
 
-func (self ItemQueue) Start(id int) {
+func (self Queue) Start(id int) {
 	defer self.Wg.Done()
 
 	for item := range self.In {

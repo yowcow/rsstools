@@ -40,15 +40,15 @@ var rssXml2 string = `
 `
 
 func TestWorker_on_rss1(t *testing.T) {
-	rssq := RssQueue{
+	q := Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *RssItem),
 	}
 
 	for i := 0; i < 4; i++ {
-		rssq.Wg.Add(1)
-		go rssq.Start(i + 1)
+		q.Wg.Add(1)
+		go q.Start(i + 1)
 	}
 
 	result := map[string]int{}
@@ -59,7 +59,7 @@ func TestWorker_on_rss1(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for item := range rssq.Out {
+			for item := range q.Out {
 				mx.Lock()
 				result[item.Link] += 1
 				mx.Unlock()
@@ -78,13 +78,13 @@ func TestWorker_on_rss1(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		r := bufio.NewReader(strings.NewReader(rssXml1))
 		feed := &httpworker.RssFeed{"url", attr, r}
-		rssq.In <- feed
+		q.In <- feed
 	}
 
-	close(rssq.In)
-	rssq.Wg.Wait()
+	close(q.In)
+	q.Wg.Wait()
 
-	close(rssq.Out)
+	close(q.Out)
 	wg.Wait()
 
 	assert.Equal(t, 10, result["http://foobar"])
@@ -92,15 +92,15 @@ func TestWorker_on_rss1(t *testing.T) {
 }
 
 func TestWorker_on_rss2(t *testing.T) {
-	rssq := RssQueue{
+	q := Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *RssItem),
 	}
 
 	for i := 0; i < 4; i++ {
-		rssq.Wg.Add(1)
-		go rssq.Start(i + 1)
+		q.Wg.Add(1)
+		go q.Start(i + 1)
 	}
 
 	result := map[string]int{}
@@ -111,7 +111,7 @@ func TestWorker_on_rss2(t *testing.T) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			for item := range rssq.Out {
+			for item := range q.Out {
 				mx.Lock()
 				result[item.Link] += 1
 				mx.Unlock()
@@ -130,13 +130,13 @@ func TestWorker_on_rss2(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		r := bufio.NewReader(strings.NewReader(rssXml2))
 		feed := &httpworker.RssFeed{"url", attr, r}
-		rssq.In <- feed
+		q.In <- feed
 	}
 
-	close(rssq.In)
-	rssq.Wg.Wait()
+	close(q.In)
+	q.Wg.Wait()
 
-	close(rssq.Out)
+	close(q.Out)
 	wg.Wait()
 
 	assert.Equal(t, 10, result["http://foobar"])
