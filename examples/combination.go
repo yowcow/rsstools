@@ -15,59 +15,75 @@ var feedUrls = []string{
 	"https://news.yahoo.co.jp/pickup/rss.xml",
 }
 
-func main() {
-	count := 0
-	mx := &sync.Mutex{}
-
-	httpQueue := httpworker.HttpQueue{
+func httpQueue(workers int) httpworker.HttpQueue {
+	q := httpworker.HttpQueue{
 		Wg:  &sync.WaitGroup{},
 		In:  make(chan *httpworker.RssFeed),
 		Out: make(chan *httpworker.RssFeed),
 	}
-	rssQueue := rssworker.RssQueue{
+	for i := 0; i < workers; i++ {
+		q.Wg.Add(1)
+		go q.Start(i + 1)
+	}
+	return q
+}
+
+func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.RssQueue {
+	q := rssworker.RssQueue{
 		Wg:  &sync.WaitGroup{},
-		In:  httpQueue.Out,
+		In:  in,
 		Out: make(chan *rssworker.RssItem),
 	}
-	logQueue := itemworker.ItemQueue{
+	for i := 0; i < workers; i++ {
+		q.Wg.Add(1)
+		go q.Start(i + 1)
+	}
+	return q
+}
+
+func logQueue(workers int, in chan *rssworker.RssItem) itemworker.ItemQueue {
+	q := itemworker.ItemQueue{
 		Wg:  &sync.WaitGroup{},
-		In:  rssQueue.Out,
+		In:  in,
 		Out: make(chan *rssworker.RssItem),
 		Task: func(item *rssworker.RssItem) bool {
 			fmt.Fprintf(os.Stdout, "Link: %s, Title: %s\n", item.Link, item.Title)
 			return true
 		},
 	}
-	countQueue := itemworker.ItemQueue{
+	for i := 0; i < workers; i++ {
+		q.Wg.Add(1)
+		go q.Start(i + 1)
+	}
+	return q
+}
+
+func countQueue(workers int, in chan *rssworker.RssItem, count *int) itemworker.ItemQueue {
+	mx := &sync.Mutex{}
+	q := itemworker.ItemQueue{
 		Wg: &sync.WaitGroup{},
-		In: logQueue.Out,
+		In: in,
 		Task: func(item *rssworker.RssItem) bool {
 			mx.Lock()
 			defer mx.Unlock()
-			count += 1
+			*count += 1
 			return false
 		},
 	}
-
-	for i := 0; i < 4; i++ {
-		httpQueue.Wg.Add(1)
-		go httpQueue.Start(i + 1)
+	for i := 0; i < workers; i++ {
+		q.Wg.Add(1)
+		go q.Start(i + 1)
 	}
+	return q
+}
 
-	for i := 0; i < 4; i++ {
-		rssQueue.Wg.Add(1)
-		go rssQueue.Start(i + 1)
-	}
+func main() {
+	count := 0
 
-	for i := 0; i < 4; i++ {
-		logQueue.Wg.Add(1)
-		go logQueue.Start(i + 1)
-	}
-
-	for i := 0; i < 4; i++ {
-		countQueue.Wg.Add(1)
-		go countQueue.Start(i + 1)
-	}
+	httpQueue := httpQueue(4)
+	rssQueue := rssQueue(4, httpQueue.Out)
+	logQueue := logQueue(2, rssQueue.Out)
+	countQueue := countQueue(2, logQueue.Out, &count)
 
 	for _, url := range feedUrls {
 		httpQueue.In <- &httpworker.RssFeed{url, nil, nil}
