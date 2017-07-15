@@ -5,6 +5,7 @@ import (
 	"os"
 	"sync"
 
+	"github.com/yowcow/rsstools/broadcaster"
 	"github.com/yowcow/rsstools/httpworker"
 	"github.com/yowcow/rsstools/itemworker"
 	"github.com/yowcow/rsstools/rssworker"
@@ -41,14 +42,13 @@ func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.Queue {
 	return q
 }
 
-func logQueue(workers int, in chan *rssworker.RssItem) itemworker.Queue {
+func logQueue(workers int) itemworker.Queue {
 	q := itemworker.Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  in,
-		Out: make(chan *rssworker.RssItem),
+		Wg: &sync.WaitGroup{},
+		In: make(chan *rssworker.RssItem),
 		Task: func(item *rssworker.RssItem) bool {
 			fmt.Fprintf(os.Stdout, "Link: %s, Title: %s\n", item.Link, item.Title)
-			return true
+			return false
 		},
 	}
 	for i := 0; i < workers; i++ {
@@ -58,11 +58,11 @@ func logQueue(workers int, in chan *rssworker.RssItem) itemworker.Queue {
 	return q
 }
 
-func countQueue(workers int, in chan *rssworker.RssItem, count *int) itemworker.Queue {
+func countQueue(workers int, count *int) itemworker.Queue {
 	mx := &sync.Mutex{}
 	q := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
-		In: in,
+		In: make(chan *rssworker.RssItem),
 		Task: func(item *rssworker.RssItem) bool {
 			mx.Lock()
 			defer mx.Unlock()
@@ -77,13 +77,29 @@ func countQueue(workers int, in chan *rssworker.RssItem, count *int) itemworker.
 	return q
 }
 
+func broadcasterQueue(workers int, in chan *rssworker.RssItem, outs ...chan *rssworker.RssItem) broadcaster.Queue {
+	q := broadcaster.Queue{
+		Wg:   &sync.WaitGroup{},
+		In:   in,
+		Outs: outs,
+	}
+	for i := 0; i < workers; i++ {
+		q.Wg.Add(1)
+		go q.Start(i + 1)
+	}
+	return q
+}
+
 func main() {
 	count := 0
 
 	httpQueue := httpQueue(4)
 	rssQueue := rssQueue(4, httpQueue.Out)
-	logQueue := logQueue(2, rssQueue.Out)
-	countQueue := countQueue(2, logQueue.Out, &count)
+
+	logQueue := logQueue(2)
+	countQueue := countQueue(2, &count)
+
+	broadcasterQueue := broadcasterQueue(2, rssQueue.Out, logQueue.In, countQueue.In)
 
 	for _, url := range feedUrls {
 		httpQueue.In <- &httpworker.RssFeed{url, nil, nil}
@@ -94,6 +110,9 @@ func main() {
 
 	close(rssQueue.In)
 	rssQueue.Wg.Wait()
+
+	close(broadcasterQueue.In)
+	broadcasterQueue.Wg.Wait()
 
 	close(logQueue.In)
 	logQueue.Wg.Wait()
