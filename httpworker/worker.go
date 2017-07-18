@@ -14,43 +14,43 @@ var (
 	Debug     = false
 )
 
-type RssAttr map[string]interface{}
+type RSSAttr map[string]interface{}
 
-type RssFeed struct {
-	Url  string
-	Attr RssAttr
+type RSSFeed struct {
+	URL  string
+	Attr RSSAttr
 	Body io.Reader
 }
 
 type Queue struct {
 	Wg  *sync.WaitGroup
-	In  chan *RssFeed
-	Out chan *RssFeed
+	In  chan *RSSFeed
+	Out chan *RSSFeed
 }
 
-func (self Queue) Start(id int) {
-	defer self.Wg.Done()
+func (q Queue) Start(id int) {
+	defer q.Wg.Done()
 
 	client := &http.Client{}
 
-	for feed := range self.In {
-		req, _ := http.NewRequest("GET", feed.Url, nil)
+	for feed := range q.In {
+		req, _ := http.NewRequest("GET", feed.URL, nil)
 		req.Header.Add("user-agent", UserAgent)
 		resp, err := client.Do(req)
 
 		if err != nil {
 			if Debug {
-				fmt.Fprintf(os.Stdout, "[Http Worker %d] %s (%s)\n", id, err, feed.Url)
+				fmt.Fprintf(os.Stdout, "[Http Worker %d] %s (%s)\n", id, err, feed.URL)
 			}
-			self.Out <- nil
+			q.Out <- nil
 			continue
 		}
 
 		if Debug {
-			fmt.Fprintf(os.Stdout, "[Http Worker %d] Status %d (%s)\n", id, resp.StatusCode, feed.Url)
+			fmt.Fprintf(os.Stdout, "[Http Worker %d] Status %d (%s)\n", id, resp.StatusCode, feed.URL)
 		}
 
 		feed.Body = bufio.NewReader(resp.Body)
-		self.Out <- feed
+		q.Out <- feed
 	}
 }

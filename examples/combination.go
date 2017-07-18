@@ -66,7 +66,7 @@ func countQueue(workers int, count *int) itemworker.Queue {
 		Task: func(item *rssworker.RssItem) bool {
 			mx.Lock()
 			defer mx.Unlock()
-			*count += 1
+			*count++
 			return false
 		},
 	}

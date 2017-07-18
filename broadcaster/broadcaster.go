@@ -8,15 +8,15 @@ import (
 
 type Queue struct {
 	Wg   *sync.WaitGroup
-	In   chan *rssworker.RssItem
-	Outs []chan *rssworker.RssItem
+	In   chan *rssworker.RSSItem
+	Outs []chan *rssworker.RSSItem
 }
 
-func (self Queue) Start(id int) {
-	defer self.Wg.Done()
+func (q Queue) Start(id int) {
+	defer q.Wg.Done()
 
-	for item := range self.In {
-		for _, out := range self.Outs {
+	for item := range q.In {
+		for _, out := range q.Outs {
 			out <- item
 		}
 	}

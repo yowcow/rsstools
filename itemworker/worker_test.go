@@ -11,9 +11,9 @@ import (
 func TestWorker_writes_to_out_chan(t *testing.T) {
 	q := Queue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *rssworker.RssItem),
-		Out: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
+		In:  make(chan *rssworker.RSSItem),
+		Out: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
 			return true
 		},
 	}
@@ -33,14 +33,14 @@ func TestWorker_writes_to_out_chan(t *testing.T) {
 			defer wg.Done()
 			for _ = range q.Out {
 				mx.Lock()
-				count += 1
+				count++
 				mx.Unlock()
 			}
 		}()
 	}
 
 	for i := 0; i < 20; i++ {
-		q.In <- &rssworker.RssItem{"Hoge", "http://hoge", nil}
+		q.In <- &rssworker.RSSItem{"Hoge", "http://hoge", nil}
 	}
 	close(q.In)
 	q.Wg.Wait()
@@ -54,9 +54,9 @@ func TestWorker_writes_to_out_chan(t *testing.T) {
 func TestWorker_no_write_to_out_chan(t *testing.T) {
 	q := Queue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *rssworker.RssItem),
-		Out: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
+		In:  make(chan *rssworker.RSSItem),
+		Out: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
 			return false
 		},
 	}
@@ -76,14 +76,14 @@ func TestWorker_no_write_to_out_chan(t *testing.T) {
 			defer wg.Done()
 			for _ = range q.Out {
 				mx.Lock()
-				count += 1
+				count++
 				mx.Unlock()
 			}
 		}()
 	}
 
 	for i := 0; i < 20; i++ {
-		q.In <- &rssworker.RssItem{"Hoge", "http://hoge", nil}
+		q.In <- &rssworker.RSSItem{"Hoge", "http://hoge", nil}
 	}
 	close(q.In)
 	q.Wg.Wait()

@@ -22,8 +22,8 @@ func TestWorker(t *testing.T) {
 
 	q := Queue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *RssFeed),
-		Out: make(chan *RssFeed),
+		In:  make(chan *RSSFeed),
+		Out: make(chan *RSSFeed),
 	}
 
 	for i := 0; i < 4; i++ {
@@ -41,7 +41,7 @@ func TestWorker(t *testing.T) {
 			defer wg.Done()
 			for feed := range q.Out {
 				mx.Lock()
-				count += 1
+				count++
 				mx.Unlock()
 
 				body, _ := ioutil.ReadAll(feed.Body)
@@ -53,14 +53,14 @@ func TestWorker(t *testing.T) {
 		}()
 	}
 
-	attr := RssAttr{
+	attr := RSSAttr{
 		"foo_flg":   true,
 		"bar_count": 1234,
 	}
 
 	for i := 0; i < 20; i++ {
-		feed := &RssFeed{
-			Url:  server.URL,
+		feed := &RSSFeed{
+			URL:  server.URL,
 			Attr: attr,
 		}
 		q.In <- feed

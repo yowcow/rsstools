@@ -11,46 +11,46 @@ import (
 )
 
 var (
-	Debug bool = false
+	Debug = false
 )
 
-type RssItem struct {
+type RSSItem struct {
 	Title string `xml:"title"`
 	Link  string `xml:"link"`
-	Attr  httpworker.RssAttr
+	Attr  httpworker.RSSAttr
 }
 
-type Rss1 struct {
-	Items []*RssItem `xml:"item"`
+type RSS1 struct {
+	Items []*RSSItem `xml:"item"`
 }
 
-type Rss2 struct {
-	Channel *Rss1 `xml:"channel"`
+type RSS2 struct {
+	Channel *RSS1 `xml:"channel"`
 }
 
 type Queue struct {
 	Wg  *sync.WaitGroup
-	In  chan *httpworker.RssFeed
-	Out chan *RssItem
+	In  chan *httpworker.RSSFeed
+	Out chan *RSSItem
 }
 
-func (self Queue) Start(id int) {
-	defer self.Wg.Done()
+func (q Queue) Start(id int) {
+	defer q.Wg.Done()
 
-	for feed := range self.In {
-		var items []*RssItem
-		rss1 := &Rss1{}
-		rss2 := &Rss2{}
+	for feed := range q.In {
+		var items []*RSSItem
+		rss1 := &RSS1{}
+		rss2 := &RSS2{}
 
-		rssXml, _ := ioutil.ReadAll(feed.Body)
+		rssXML, _ := ioutil.ReadAll(feed.Body)
 
-		if err := xml.Unmarshal(rssXml, rss1); err != nil {
-			fmt.Fprintf(os.Stdout, "[Rss Worker %d] Failed parsing XML %s\n", id, err)
+		if err := xml.Unmarshal(rssXML, rss1); err != nil {
+			fmt.Fprintf(os.Stdout, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
 			continue
 		}
 
-		if err := xml.Unmarshal(rssXml, rss2); err != nil {
-			fmt.Fprintf(os.Stdout, "[Rss Worker %d] Failed parsing XML %s\n", id, err)
+		if err := xml.Unmarshal(rssXML, rss2); err != nil {
+			fmt.Fprintf(os.Stdout, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
 			continue
 		}
 
@@ -62,7 +62,7 @@ func (self Queue) Start(id int) {
 
 		for _, item := range items {
 			item.Attr = feed.Attr
-			self.Out <- item
+			q.Out <- item
 		}
 	}
 }

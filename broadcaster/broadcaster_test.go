@@ -13,9 +13,9 @@ func TestBroadcaster(t *testing.T) {
 	q1Count := 0
 	iq1 := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
-			q1Count += 1
+		In: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
+			q1Count++
 			return false
 		},
 	}
@@ -23,9 +23,9 @@ func TestBroadcaster(t *testing.T) {
 	q2Count := 0
 	iq2 := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
-			q2Count += 1
+		In: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
+			q2Count++
 			return false
 		},
 	}
@@ -38,15 +38,15 @@ func TestBroadcaster(t *testing.T) {
 
 	bq := Queue{
 		Wg:   &sync.WaitGroup{},
-		In:   make(chan *rssworker.RssItem),
-		Outs: []chan *rssworker.RssItem{iq1.In, iq2.In},
+		In:   make(chan *rssworker.RSSItem),
+		Outs: []chan *rssworker.RSSItem{iq1.In, iq2.In},
 	}
 
 	bq.Wg.Add(1)
 	go bq.Start(1)
 
 	for i := 0; i < 10; i++ {
-		bq.In <- &rssworker.RssItem{"hoge", "fuga", nil}
+		bq.In <- &rssworker.RSSItem{"hoge", "fuga", nil}
 	}
 
 	close(bq.In)
