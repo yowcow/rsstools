@@ -42,7 +42,6 @@ func (q Queue) Start(id int) {
 			if Debug {
 				fmt.Fprintf(os.Stdout, "[Http Worker %d] %s (%s)\n", id, err, feed.URL)
 			}
-			q.Out <- nil
 			continue
 		}
 
@@ -50,7 +49,9 @@ func (q Queue) Start(id int) {
 			fmt.Fprintf(os.Stdout, "[Http Worker %d] Status %d (%s)\n", id, resp.StatusCode, feed.URL)
 		}
 
-		feed.Body = bufio.NewReader(resp.Body)
-		q.Out <- feed
+		if resp.StatusCode == http.StatusOK {
+			feed.Body = bufio.NewReader(resp.Body)
+			q.Out <- feed
+		}
 	}
 }

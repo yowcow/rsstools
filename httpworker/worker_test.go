@@ -10,14 +10,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func httphandler(w http.ResponseWriter, req *http.Request) {
+func httpOKHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("content-type", "text/plain")
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("ほげ"))
 }
 
-func TestWorker(t *testing.T) {
-	server := httptest.NewServer(http.HandlerFunc(httphandler))
+func httpErrorHandler(w http.ResponseWriter, req *http.Request) {
+	w.Header().Add("content-type", "text/plain")
+	w.WriteHeader(404)
+	w.Write([]byte("Not Found"))
+}
+
+func TestWorkerSucceeds(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(httpOKHandler))
 	defer server.Close()
 
 	q := Queue{
@@ -73,4 +79,48 @@ func TestWorker(t *testing.T) {
 	wg.Wait()
 
 	assert.Equal(t, 20, count)
+}
+
+func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(httpErrorHandler))
+	defer server.Close()
+
+	q := Queue{
+		Wg:  &sync.WaitGroup{},
+		In:  make(chan *RSSFeed),
+		Out: make(chan *RSSFeed),
+	}
+
+	q.Wg.Add(1)
+	go q.Start(1)
+
+	count := 0
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go func(ch chan *RSSFeed) {
+		defer wg.Done()
+
+		for _ = range ch {
+			count++
+		}
+	}(q.Out)
+
+	attr := RSSAttr{
+		"foo_flg":   true,
+		"bar_count": 1234,
+	}
+
+	q.In <- &RSSFeed{
+		URL:  server.URL,
+		Attr: attr,
+	}
+
+	close(q.In)
+	q.Wg.Wait()
+
+	close(q.Out)
+	wg.Wait()
+
+	assert.Equal(t, 0, count)
 }
