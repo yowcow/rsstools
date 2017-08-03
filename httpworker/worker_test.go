@@ -1,7 +1,6 @@
 package httpworker
 
 import (
-	"io/ioutil"
 	"net/http"
 	"net/http/httptest"
 	"sync"
@@ -50,11 +49,9 @@ func TestWorkerSucceeds(t *testing.T) {
 				count++
 				mx.Unlock()
 
-				body, _ := ioutil.ReadAll(feed.Body)
-
 				assert.Equal(t, true, feed.Attr["foo_flg"])
 				assert.Equal(t, 1234, feed.Attr["bar_count"])
-				assert.Equal(t, "ほげ", string(body))
+				assert.Equal(t, "ほげ", feed.Body.String())
 			}
 		}()
 	}

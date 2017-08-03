@@ -1,9 +1,9 @@
 package httpworker
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
-	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
 	"sync"
@@ -19,7 +19,7 @@ type RSSAttr map[string]interface{}
 type RSSFeed struct {
 	URL  string
 	Attr RSSAttr
-	Body io.Reader
+	Body *bytes.Buffer
 }
 
 type Queue struct {
@@ -40,18 +40,26 @@ func (q Queue) Start(id int) {
 
 		if err != nil {
 			if Debug {
-				fmt.Fprintf(os.Stdout, "[Http Worker %d] %s (%s)\n", id, err, feed.URL)
+				fmt.Fprintf(os.Stdout, "[HTTP Worker %d] %s (%s)\n", id, err, feed.URL)
 			}
 			continue
 		}
 
-		if Debug {
-			fmt.Fprintf(os.Stdout, "[Http Worker %d] Status %d (%s)\n", id, resp.StatusCode, feed.URL)
+		if resp.StatusCode != http.StatusOK {
+			fmt.Fprintf(os.Stdout, "[HTTP Worker %d] Got error status %d (%s)\n", id, resp.StatusCode, feed.URL)
+			continue
 		}
 
-		if resp.StatusCode == http.StatusOK {
-			feed.Body = bufio.NewReader(resp.Body)
-			q.Out <- feed
+		body, err := ioutil.ReadAll(resp.Body)
+
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "[HTTP Worder %d] %s (%s)\n", id, err, feed.URL)
+			continue
 		}
+
+		feed.Body = bytes.NewBuffer(body)
+		q.Out <- feed
+
+		resp.Body.Close()
 	}
 }

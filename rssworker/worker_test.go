@@ -1,8 +1,7 @@
 package rssworker
 
 import (
-	"bufio"
-	"strings"
+	"bytes"
 	"sync"
 	"testing"
 
@@ -76,8 +75,8 @@ func TestWorker_on_rss1(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		r := bufio.NewReader(strings.NewReader(rssXML1))
-		feed := &httpworker.RSSFeed{"url", attr, r}
+		buf := bytes.NewBufferString(rssXML1)
+		feed := &httpworker.RSSFeed{"url", attr, buf}
 		q.In <- feed
 	}
 
@@ -128,8 +127,8 @@ func TestWorker_on_rss2(t *testing.T) {
 	}
 
 	for i := 0; i < 10; i++ {
-		r := bufio.NewReader(strings.NewReader(rssXML2))
-		feed := &httpworker.RSSFeed{"url", attr, r}
+		buf := bytes.NewBufferString(rssXML2)
+		feed := &httpworker.RSSFeed{"url", attr, buf}
 		q.In <- feed
 	}
 
