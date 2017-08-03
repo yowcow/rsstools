@@ -23,43 +23,50 @@ type RSSFeed struct {
 }
 
 type Queue struct {
-	Wg  *sync.WaitGroup
-	In  chan *RSSFeed
-	Out chan *RSSFeed
+	Wg     *sync.WaitGroup
+	In     chan *RSSFeed
+	Out    chan *RSSFeed
+	client *http.Client
 }
 
 func (q Queue) Start(id int) {
 	defer q.Wg.Done()
-
-	client := &http.Client{}
+	q.client = &http.Client{}
 
 	for feed := range q.In {
-		req, _ := http.NewRequest("GET", feed.URL, nil)
-		req.Header.Add("user-agent", UserAgent)
-		resp, err := client.Do(req)
+		buf, err := q.fetch(feed.URL)
 
 		if err != nil {
-			if Debug {
-				fmt.Fprintf(os.Stdout, "[HTTP Worker %d] %s (%s)\n", id, err, feed.URL)
-			}
+			fmt.Fprintf(os.Stderr, "[HTTP Worker %d] %s (%s)\n", id, err, feed.URL)
 			continue
 		}
 
-		if resp.StatusCode != http.StatusOK {
-			fmt.Fprintf(os.Stdout, "[HTTP Worker %d] Got error status %d (%s)\n", id, resp.StatusCode, feed.URL)
-			continue
-		}
+		feed.Body = buf
 
-		body, err := ioutil.ReadAll(resp.Body)
-
-		if err != nil {
-			fmt.Fprintf(os.Stdout, "[HTTP Worder %d] %s (%s)\n", id, err, feed.URL)
-			continue
-		}
-
-		feed.Body = bytes.NewBuffer(body)
 		q.Out <- feed
-
-		resp.Body.Close()
 	}
+}
+
+func (q Queue) fetch(url string) (*bytes.Buffer, error) {
+	req, _ := http.NewRequest("GET", url, nil)
+	req.Header.Add("user-agent", UserAgent)
+	resp, err := q.client.Do(req)
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("expected HTTP status 200 but got %d", resp.StatusCode)
+	}
+
+	body, err := ioutil.ReadAll(resp.Body)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return bytes.NewBuffer(body), nil
 }
