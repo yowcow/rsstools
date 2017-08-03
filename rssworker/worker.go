@@ -3,7 +3,6 @@ package rssworker
 import (
 	"encoding/xml"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sync"
 
@@ -42,7 +41,7 @@ func (q Queue) Start(id int) {
 		rss1 := &RSS1{}
 		rss2 := &RSS2{}
 
-		rssXML, _ := ioutil.ReadAll(feed.Body)
+		rssXML := feed.Body.Bytes()
 
 		if err := xml.Unmarshal(rssXML, rss1); err != nil {
 			fmt.Fprintf(os.Stdout, "[RSS Worker %d] Failed parsing XML %s\n", id, err)

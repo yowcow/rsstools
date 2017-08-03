@@ -19,8 +19,8 @@ var feedUrls = []string{
 func httpQueue(workers int) httpworker.Queue {
 	q := httpworker.Queue{
 		Wg:  &sync.WaitGroup{},
-		In:  make(chan *httpworker.RssFeed),
-		Out: make(chan *httpworker.RssFeed),
+		In:  make(chan *httpworker.RSSFeed),
+		Out: make(chan *httpworker.RSSFeed),
 	}
 	for i := 0; i < workers; i++ {
 		q.Wg.Add(1)
@@ -29,11 +29,11 @@ func httpQueue(workers int) httpworker.Queue {
 	return q
 }
 
-func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.Queue {
+func rssQueue(workers int, in chan *httpworker.RSSFeed) rssworker.Queue {
 	q := rssworker.Queue{
 		Wg:  &sync.WaitGroup{},
 		In:  in,
-		Out: make(chan *rssworker.RssItem),
+		Out: make(chan *rssworker.RSSItem),
 	}
 	for i := 0; i < workers; i++ {
 		q.Wg.Add(1)
@@ -45,8 +45,8 @@ func rssQueue(workers int, in chan *httpworker.RssFeed) rssworker.Queue {
 func logQueue(workers int) itemworker.Queue {
 	q := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
+		In: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
 			fmt.Fprintf(os.Stdout, "Link: %s, Title: %s\n", item.Link, item.Title)
 			return false
 		},
@@ -62,8 +62,8 @@ func countQueue(workers int, count *int) itemworker.Queue {
 	mx := &sync.Mutex{}
 	q := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RssItem),
-		Task: func(item *rssworker.RssItem) bool {
+		In: make(chan *rssworker.RSSItem),
+		Task: func(item *rssworker.RSSItem) bool {
 			mx.Lock()
 			defer mx.Unlock()
 			*count++
@@ -77,7 +77,7 @@ func countQueue(workers int, count *int) itemworker.Queue {
 	return q
 }
 
-func broadcasterQueue(workers int, in chan *rssworker.RssItem, outs ...chan *rssworker.RssItem) broadcaster.Queue {
+func broadcasterQueue(workers int, in chan *rssworker.RSSItem, outs ...chan *rssworker.RSSItem) broadcaster.Queue {
 	q := broadcaster.Queue{
 		Wg:   &sync.WaitGroup{},
 		In:   in,
@@ -102,7 +102,7 @@ func main() {
 	broadcasterQueue := broadcasterQueue(2, rssQueue.Out, logQueue.In, countQueue.In)
 
 	for _, url := range feedUrls {
-		httpQueue.In <- &httpworker.RssFeed{url, nil, nil}
+		httpQueue.In <- &httpworker.RSSFeed{url, nil, nil}
 	}
 
 	close(httpQueue.In)
