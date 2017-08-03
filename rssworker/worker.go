@@ -44,12 +44,12 @@ func (q Queue) Start(id int) {
 		rssXML := feed.Body.Bytes()
 
 		if err := xml.Unmarshal(rssXML, rss1); err != nil {
-			fmt.Fprintf(os.Stdout, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
+			fmt.Fprintf(os.Stderr, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
 			continue
 		}
 
 		if err := xml.Unmarshal(rssXML, rss2); err != nil {
-			fmt.Fprintf(os.Stdout, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
+			fmt.Fprintf(os.Stderr, "[RSS Worker %d] Failed parsing XML %s\n", id, err)
 			continue
 		}
 
