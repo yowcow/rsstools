@@ -2,6 +2,8 @@ package rssworker
 
 import (
 	"bytes"
+	"log"
+	"strings"
 	"sync"
 	"testing"
 
@@ -39,10 +41,14 @@ var rssXML2 = `
 `
 
 func TestWorker_on_rss1(t *testing.T) {
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "[hoge] ", log.Lshortfile)
+
 	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *httpworker.RSSFeed),
-		Out: make(chan *RSSItem),
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *httpworker.RSSFeed),
+		Out:    make(chan *RSSItem),
+		Logger: logger,
 	}
 
 	for i := 0; i < 4; i++ {
@@ -88,13 +94,18 @@ func TestWorker_on_rss1(t *testing.T) {
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
+	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
 }
 
 func TestWorker_on_rss2(t *testing.T) {
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "[hoge] ", log.Lshortfile)
+
 	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *httpworker.RSSFeed),
-		Out: make(chan *RSSItem),
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *httpworker.RSSFeed),
+		Out:    make(chan *RSSItem),
+		Logger: logger,
 	}
 
 	for i := 0; i < 4; i++ {
@@ -140,4 +151,44 @@ func TestWorker_on_rss2(t *testing.T) {
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
+	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
+}
+
+func TestWorker_on_invalid_xml(t *testing.T) {
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "", log.Lshortfile)
+
+	q := Queue{
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *httpworker.RSSFeed),
+		Out:    make(chan *RSSItem),
+		Logger: logger,
+	}
+
+	count := 0
+	q.Wg.Add(1)
+	go q.Start(1)
+
+	wg := &sync.WaitGroup{}
+	wg.Add(1)
+	go func(w *sync.WaitGroup, ch chan *RSSItem) {
+		defer w.Done()
+		for _ = range ch {
+			count++
+		}
+	}(wg, q.Out)
+
+	rssbuf := bytes.NewBufferString("something has happened")
+	feed := &httpworker.RSSFeed{"http://something/rss", httpworker.RSSAttr{}, rssbuf}
+	q.In <- feed
+	q.In <- feed
+
+	close(q.In)
+	q.Wg.Wait()
+
+	close(q.Out)
+	wg.Wait()
+
+	assert.Equal(t, 0, count)
+	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
 }

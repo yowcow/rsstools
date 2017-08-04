@@ -1,8 +1,11 @@
 package httpworker
 
 import (
+	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"sync"
 	"testing"
 
@@ -25,10 +28,14 @@ func TestWorkerSucceeds(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpOKHandler))
 	defer server.Close()
 
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+
 	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *RSSFeed),
-		Out: make(chan *RSSFeed),
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *RSSFeed),
+		Out:    make(chan *RSSFeed),
+		Logger: logger,
 	}
 
 	for i := 0; i < 4; i++ {
@@ -76,16 +83,22 @@ func TestWorkerSucceeds(t *testing.T) {
 	wg.Wait()
 
 	assert.Equal(t, 20, count)
+	assert.Equal(t, "", logbuf.String())
+	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
 }
 
 func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpErrorHandler))
 	defer server.Close()
 
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+
 	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *RSSFeed),
-		Out: make(chan *RSSFeed),
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *RSSFeed),
+		Out:    make(chan *RSSFeed),
+		Logger: logger,
 	}
 
 	q.Wg.Add(1)
@@ -108,10 +121,12 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 		"bar_count": 1234,
 	}
 
-	q.In <- &RSSFeed{
+	feed := &RSSFeed{
 		URL:  server.URL,
 		Attr: attr,
 	}
+	q.In <- feed
+	q.In <- feed
 
 	close(q.In)
 	q.Wg.Wait()
@@ -120,4 +135,5 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	wg.Wait()
 
 	assert.Equal(t, 0, count)
+	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
 }

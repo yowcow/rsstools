@@ -4,14 +4,13 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"net/http"
-	"os"
 	"sync"
 )
 
 var (
 	UserAgent = "httpworker/1"
-	Debug     = false
 )
 
 type RSSAttr map[string]interface{}
@@ -26,6 +25,7 @@ type Queue struct {
 	Wg     *sync.WaitGroup
 	In     chan *RSSFeed
 	Out    chan *RSSFeed
+	Logger *log.Logger
 	client *http.Client
 }
 
@@ -37,7 +37,7 @@ func (q Queue) Start(id int) {
 		buf, err := q.fetch(feed.URL)
 
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "[HTTP Worker %d] %s (%s)\n", id, err, feed.URL)
+			q.Logger.Printf("[HTTP Worker %d] %s (%s)", id, err, feed.URL)
 			continue
 		}
 
