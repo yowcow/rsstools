@@ -37,7 +37,7 @@ func (q Queue) Start(id int) {
 		buf, err := q.fetch(feed.URL)
 
 		if err != nil {
-			q.Logger.Printf("[HTTP Worker %d] %s (%s)\n", id, err, feed.URL)
+			q.Logger.Printf("[HTTP Worker %d] %s (%s)", id, err, feed.URL)
 			continue
 		}
 
