@@ -1,8 +1,9 @@
 package main
 
 import (
+	"bytes"
 	"fmt"
-	"os"
+	"log"
 	"sync"
 
 	"github.com/yowcow/rsstools/broadcaster"
@@ -16,11 +17,12 @@ var feedUrls = []string{
 	"https://news.yahoo.co.jp/pickup/rss.xml",
 }
 
-func httpQueue(workers int) httpworker.Queue {
+func httpQueue(workers int, logger *log.Logger) httpworker.Queue {
 	q := httpworker.Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *httpworker.RSSFeed),
-		Out: make(chan *httpworker.RSSFeed),
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *httpworker.RSSFeed),
+		Out:    make(chan *httpworker.RSSFeed),
+		Logger: logger,
 	}
 	for i := 0; i < workers; i++ {
 		q.Wg.Add(1)
@@ -29,11 +31,12 @@ func httpQueue(workers int) httpworker.Queue {
 	return q
 }
 
-func rssQueue(workers int, in chan *httpworker.RSSFeed) rssworker.Queue {
+func rssQueue(workers int, in chan *httpworker.RSSFeed, logger *log.Logger) rssworker.Queue {
 	q := rssworker.Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  in,
-		Out: make(chan *rssworker.RSSItem),
+		Wg:     &sync.WaitGroup{},
+		In:     in,
+		Out:    make(chan *rssworker.RSSItem),
+		Logger: logger,
 	}
 	for i := 0; i < workers; i++ {
 		q.Wg.Add(1)
@@ -42,12 +45,12 @@ func rssQueue(workers int, in chan *httpworker.RSSFeed) rssworker.Queue {
 	return q
 }
 
-func logQueue(workers int) itemworker.Queue {
+func logQueue(workers int, logger *log.Logger) itemworker.Queue {
 	q := itemworker.Queue{
 		Wg: &sync.WaitGroup{},
 		In: make(chan *rssworker.RSSItem),
 		Task: func(item *rssworker.RSSItem) bool {
-			fmt.Fprintf(os.Stdout, "Link: %s, Title: %s\n", item.Link, item.Title)
+			logger.Printf("Link: %s, Title: %s", item.Link, item.Title)
 			return false
 		},
 	}
@@ -93,10 +96,13 @@ func broadcasterQueue(workers int, in chan *rssworker.RSSItem, outs ...chan *rss
 func main() {
 	count := 0
 
-	httpQueue := httpQueue(4)
-	rssQueue := rssQueue(4, httpQueue.Out)
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "", log.LstdFlags|log.Lmicroseconds)
 
-	logQueue := logQueue(2)
+	httpQueue := httpQueue(4, logger)
+	rssQueue := rssQueue(4, httpQueue.Out, logger)
+
+	logQueue := logQueue(2, logger)
 	countQueue := countQueue(2, &count)
 
 	broadcasterQueue := broadcasterQueue(2, rssQueue.Out, logQueue.In, countQueue.In)
@@ -121,4 +127,5 @@ func main() {
 	countQueue.Wg.Wait()
 
 	fmt.Println("Fetched total =>", count)
+	fmt.Println(logbuf.String())
 }
