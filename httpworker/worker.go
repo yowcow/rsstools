@@ -26,12 +26,11 @@ type Queue struct {
 	In     chan *RSSFeed
 	Out    chan *RSSFeed
 	Logger *log.Logger
-	client *http.Client
+	Client *http.Client
 }
 
 func (q Queue) Start(id int) {
 	defer q.Wg.Done()
-	q.client = &http.Client{}
 
 	for feed := range q.In {
 		buf, err := q.fetch(feed.URL)
@@ -50,7 +49,7 @@ func (q Queue) Start(id int) {
 func (q Queue) fetch(url string) (*bytes.Buffer, error) {
 	req, _ := http.NewRequest("GET", url, nil)
 	req.Header.Add("user-agent", UserAgent)
-	resp, err := q.client.Do(req)
+	resp, err := q.Client.Do(req)
 
 	if err != nil {
 		return nil, err

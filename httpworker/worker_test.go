@@ -5,11 +5,17 @@ import (
 	"log"
 	"net/http"
 	"net/http/httptest"
+	"regexp"
 	"strings"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
+)
+
+var (
+	TimeoutMillisecs = 100
 )
 
 func httpOKHandler(w http.ResponseWriter, req *http.Request) {
@@ -20,8 +26,14 @@ func httpOKHandler(w http.ResponseWriter, req *http.Request) {
 
 func httpErrorHandler(w http.ResponseWriter, req *http.Request) {
 	w.Header().Add("content-type", "text/plain")
-	w.WriteHeader(404)
+	w.WriteHeader(http.StatusNotFound)
 	w.Write([]byte("Not Found"))
+}
+
+func httpTimeoutHandler(w http.ResponseWriter, req *http.Request) {
+	time.Sleep(time.Duration(TimeoutMillisecs) * time.Millisecond)
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("OK"))
 }
 
 func TestWorkerSucceeds(t *testing.T) {
@@ -36,6 +48,7 @@ func TestWorkerSucceeds(t *testing.T) {
 		In:     make(chan *RSSFeed),
 		Out:    make(chan *RSSFeed),
 		Logger: logger,
+		Client: &http.Client{},
 	}
 
 	for i := 0; i < 4; i++ {
@@ -99,6 +112,7 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 		In:     make(chan *RSSFeed),
 		Out:    make(chan *RSSFeed),
 		Logger: logger,
+		Client: &http.Client{},
 	}
 
 	q.Wg.Add(1)
@@ -136,4 +150,54 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 
 	assert.Equal(t, 0, count)
 	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
+}
+
+func TestWorkerDoNothingOnTimeout(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(httpTimeoutHandler))
+	defer server.Close()
+
+	logbuf := bytes.Buffer{}
+	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+
+	q := Queue{
+		Wg:     &sync.WaitGroup{},
+		In:     make(chan *RSSFeed),
+		Out:    make(chan *RSSFeed),
+		Logger: logger,
+		Client: &http.Client{
+			Timeout: time.Duration(TimeoutMillisecs-10) * time.Millisecond,
+		},
+	}
+
+	q.Wg.Add(1)
+	go q.Start(1)
+
+	count := 0
+	wg := &sync.WaitGroup{}
+
+	wg.Add(1)
+	go func(ch chan *RSSFeed) {
+		defer wg.Done()
+
+		for _ = range ch {
+			count++
+		}
+	}(q.Out)
+
+	feed := &RSSFeed{
+		URL:  server.URL,
+		Attr: RSSAttr{},
+	}
+	q.In <- feed
+
+	close(q.In)
+	q.Wg.Wait()
+
+	close(q.Out)
+	wg.Wait()
+
+	re := regexp.MustCompile("request canceled")
+
+	assert.Equal(t, 0, count)
+	assert.True(t, re.Match(logbuf.Bytes()))
 }
