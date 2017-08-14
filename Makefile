@@ -1,7 +1,8 @@
 .PHONY: all test
 
 all:
-	godep save -v ./...
+	go get github.com/golang/dep/cmd/dep
+	dep ensure -v
 
 test:
-	go test -v ./httpworker ./rssworker ./itemworker ./broadcaster
+	go test ./httpworker ./rssworker ./itemworker ./broadcaster
