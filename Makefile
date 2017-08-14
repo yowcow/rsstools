@@ -1,7 +1,7 @@
 .PHONY: all test
 
 all:
-	go get github.com/golang/dep/cmd/dep
+	go get -u github.com/golang/dep/cmd/dep
 	dep ensure -v
 
 test:
