@@ -2,7 +2,6 @@ package httpworker
 
 import (
 	"bytes"
-	"log"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -11,6 +10,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,7 +41,9 @@ func TestWorkerSucceeds(t *testing.T) {
 	defer server.Close()
 
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},
@@ -105,7 +107,9 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	defer server.Close()
 
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},
@@ -157,7 +161,9 @@ func TestWorkerDoNothingOnTimeout(t *testing.T) {
 	defer server.Close()
 
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "[test] ", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},

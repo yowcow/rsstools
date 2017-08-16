@@ -2,11 +2,11 @@ package rssworker
 
 import (
 	"bytes"
-	"log"
 	"strings"
 	"sync"
 	"testing"
 
+	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/httpworker"
 )
@@ -42,7 +42,9 @@ var rssXML2 = `
 
 func TestWorker_on_rss1(t *testing.T) {
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "[hoge] ", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},
@@ -99,7 +101,9 @@ func TestWorker_on_rss1(t *testing.T) {
 
 func TestWorker_on_rss2(t *testing.T) {
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "[hoge] ", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},
@@ -156,7 +160,9 @@ func TestWorker_on_rss2(t *testing.T) {
 
 func TestWorker_on_invalid_xml(t *testing.T) {
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "", log.Lshortfile)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	q := Queue{
 		Wg:     &sync.WaitGroup{},

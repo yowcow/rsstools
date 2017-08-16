@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/http"
 	"sync"
+
+	"github.com/yowcow/rsstools/log"
 )
 
 var (
@@ -25,7 +26,7 @@ type Queue struct {
 	Wg     *sync.WaitGroup
 	In     chan *RSSFeed
 	Out    chan *RSSFeed
-	Logger *log.Logger
+	Logger log.Logger
 	Client *http.Client
 }
 
@@ -36,7 +37,7 @@ func (q Queue) Start(id int) {
 		buf, err := q.fetch(feed.URL)
 
 		if err != nil {
-			q.Logger.Printf("[HTTP Worker %d] %s (%s)", id, err, feed.URL)
+			q.Logger.Error(fmt.Sprintf("[HTTP Worker %d] %s (%s)", id, err, feed.URL))
 			continue
 		}
 

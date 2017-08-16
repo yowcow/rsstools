@@ -2,10 +2,11 @@ package rssworker
 
 import (
 	"encoding/xml"
-	"log"
+	"fmt"
 	"sync"
 
 	"github.com/yowcow/rsstools/httpworker"
+	"github.com/yowcow/rsstools/log"
 )
 
 var (
@@ -30,7 +31,7 @@ type Queue struct {
 	Wg     *sync.WaitGroup
 	In     chan *httpworker.RSSFeed
 	Out    chan *RSSItem
-	Logger *log.Logger
+	Logger log.Logger
 }
 
 func (q Queue) Start(id int) {
@@ -42,14 +43,14 @@ func (q Queue) Start(id int) {
 		rss1, err := q.parseRSS1(rssXML)
 
 		if err != nil {
-			q.Logger.Printf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL)
+			q.Logger.Error(fmt.Sprintf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL))
 			continue
 		}
 
 		rss2, err := q.parseRSS2(rssXML)
 
 		if err != nil {
-			q.Logger.Printf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL)
+			q.Logger.Error(fmt.Sprintf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL))
 			continue
 		}
 
