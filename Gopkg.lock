@@ -8,6 +8,24 @@
   version = "v1.1.0"
 
 [[projects]]
+  name = "github.com/labstack/gommon"
+  packages = ["color","log"]
+  revision = "779b8a8b9850a97acba6a3fe20feb628c39e17c1"
+  version = "0.2.2"
+
+[[projects]]
+  name = "github.com/mattn/go-colorable"
+  packages = ["."]
+  revision = "167de6bfdfba052fa6b2d3664c8f5272e23c9072"
+  version = "v0.0.9"
+
+[[projects]]
+  name = "github.com/mattn/go-isatty"
+  packages = ["."]
+  revision = "fc9e8d8ef48496124e79ae0df75490096eccf6fe"
+  version = "v0.0.2"
+
+[[projects]]
   name = "github.com/pmezard/go-difflib"
   packages = ["difflib"]
   revision = "792786c7400a136282c1664665ae0a8db921c6c2"
@@ -19,9 +37,27 @@
   revision = "69483b4bd14f5845b5a1e55bca19e954e827f1d0"
   version = "v1.1.4"
 
+[[projects]]
+  branch = "master"
+  name = "github.com/valyala/bytebufferpool"
+  packages = ["."]
+  revision = "e746df99fe4a3986f4d4f79e13c1e0117ce9c2f7"
+
+[[projects]]
+  branch = "master"
+  name = "github.com/valyala/fasttemplate"
+  packages = ["."]
+  revision = "dcecefd839c4193db0d35b88ec65b4c12d360ab0"
+
+[[projects]]
+  branch = "master"
+  name = "golang.org/x/sys"
+  packages = ["unix"]
+  revision = "9f7170bcd8e9f4d3691c06401119c46a769a1e03"
+
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "b750880cdc8ce044e6f9bf3b331d8a392471c328107b8c3d42e3e11022d76858"
+  inputs-digest = "4c1e45215b84e23cb6618af13b3033dbb805066cbfc2862e1206a0421a595206"
   solver-name = "gps-cdcl"
   solver-version = 1
