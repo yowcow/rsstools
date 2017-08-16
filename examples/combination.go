@@ -3,9 +3,10 @@ package main
 import (
 	"bytes"
 	"fmt"
-	"log"
+	"net/http"
 	"sync"
 
+	"github.com/labstack/gommon/log"
 	"github.com/yowcow/rsstools/broadcaster"
 	"github.com/yowcow/rsstools/httpworker"
 	"github.com/yowcow/rsstools/itemworker"
@@ -23,6 +24,7 @@ func httpQueue(workers int, logger *log.Logger) httpworker.Queue {
 		In:     make(chan *httpworker.RSSFeed),
 		Out:    make(chan *httpworker.RSSFeed),
 		Logger: logger,
+		Client: &http.Client{},
 	}
 	for i := 0; i < workers; i++ {
 		q.Wg.Add(1)
@@ -50,7 +52,7 @@ func logQueue(workers int, logger *log.Logger) itemworker.Queue {
 		Wg: &sync.WaitGroup{},
 		In: make(chan *rssworker.RSSItem),
 		Task: func(item *rssworker.RSSItem) bool {
-			logger.Printf("Link: %s, Title: %s", item.Link, item.Title)
+			logger.Infof("Link: %s, Title: %s", item.Link, item.Title)
 			return false
 		},
 	}
@@ -97,7 +99,9 @@ func main() {
 	count := 0
 
 	logbuf := bytes.Buffer{}
-	logger := log.New(&logbuf, "", log.LstdFlags|log.Lmicroseconds)
+	logger := log.New("")
+	logger.SetOutput(&logbuf)
+	logger.SetHeader(`${level}`)
 
 	httpQueue := httpQueue(4, logger)
 	rssQueue := rssQueue(4, httpQueue.Out, logger)
