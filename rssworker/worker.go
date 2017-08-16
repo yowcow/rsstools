@@ -2,7 +2,6 @@ package rssworker
 
 import (
 	"encoding/xml"
-	"fmt"
 	"sync"
 
 	"github.com/yowcow/rsstools/httpworker"
@@ -43,14 +42,14 @@ func (q Queue) Start(id int) {
 		rss1, err := q.parseRSS1(rssXML)
 
 		if err != nil {
-			q.Logger.Error(fmt.Sprintf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL))
+			q.Logger.Errorf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL)
 			continue
 		}
 
 		rss2, err := q.parseRSS2(rssXML)
 
 		if err != nil {
-			q.Logger.Error(fmt.Sprintf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL))
+			q.Logger.Errorf("[RSS Worker %d] Failed parsing XML %s (%s)", id, err, feed.URL)
 			continue
 		}
 
