@@ -40,9 +40,9 @@ func TestWorkerSucceeds(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpOKHandler))
 	defer server.Close()
 
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{
@@ -106,9 +106,9 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpErrorHandler))
 	defer server.Close()
 
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{
@@ -160,9 +160,9 @@ func TestWorkerDoNothingOnTimeout(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpTimeoutHandler))
 	defer server.Close()
 
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{

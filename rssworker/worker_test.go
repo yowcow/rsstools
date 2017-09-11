@@ -41,9 +41,9 @@ var rssXML2 = `
 `
 
 func TestWorker_on_rss1(t *testing.T) {
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{
@@ -100,9 +100,9 @@ func TestWorker_on_rss1(t *testing.T) {
 }
 
 func TestWorker_on_rss2(t *testing.T) {
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{
@@ -159,9 +159,9 @@ func TestWorker_on_rss2(t *testing.T) {
 }
 
 func TestWorker_on_invalid_xml(t *testing.T) {
-	logbuf := bytes.Buffer{}
+	logbuf := &bytes.Buffer{}
 	logger := log.New("")
-	logger.SetOutput(&logbuf)
+	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
 	q := Queue{
