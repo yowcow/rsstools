@@ -1,95 +1,80 @@
 package itemworker
 
 import (
-	"sync"
+	"bytes"
+	_ "fmt"
+	_ "sync"
 	"testing"
 
+	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/rssworker"
 )
 
 func TestWorker_writes_to_out_chan(t *testing.T) {
-	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *rssworker.RSSItem),
-		Out: make(chan *rssworker.RSSItem),
-		Task: func(item *rssworker.RSSItem) bool {
-			return true
+	type input struct {
+		name string
+		fn   RSSItemTask
+	}
+	type Case struct {
+		input
+		expectedCount int
+		subtest       string
+	}
+
+	cases := []Case{
+		{
+			input{
+				name: "always piped",
+				fn: func(item *rssworker.RSSItem) bool {
+					return true
+				},
+			},
+			20,
+			"task returns true pipes",
+		},
+		{
+			input{
+				name: "always not piped",
+				fn: func(item *rssworker.RSSItem) bool {
+					return false
+				},
+			},
+			0,
+			"task returns false is not piped",
 		},
 	}
 
-	for i := 0; i < 4; i++ {
-		q.Wg.Add(1)
-		go q.Start(i + 1)
-	}
+	for _, c := range cases {
+		t.Run(c.subtest, func(t *testing.T) {
+			logbuf := new(bytes.Buffer)
+			logger := log.New("")
+			logger.SetLevel(log.ERROR)
+			logger.SetOutput(logbuf)
+			logger.SetHeader(`${level}`)
 
-	wg := &sync.WaitGroup{}
-	mx := &sync.Mutex{}
-	count := 0
+			in := make(chan *rssworker.RSSItem)
+			q := New(c.input.name, c.input.fn, logger)
+			out := q.Start(in, 4)
 
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for _ = range q.Out {
-				mx.Lock()
-				count++
-				mx.Unlock()
+			count := 0
+			done := make(chan bool)
+			go func() {
+				for _ = range out {
+					count++
+				}
+				done <- true
+			}()
+
+			for i := 0; i < 20; i++ {
+				in <- &rssworker.RSSItem{"Hoge", "http://hoge", nil}
 			}
-		}()
+
+			close(in)
+			q.Finish()
+			<-done
+
+			assert.Equal(t, c.expectedCount, count)
+		})
 	}
-
-	for i := 0; i < 20; i++ {
-		q.In <- &rssworker.RSSItem{"Hoge", "http://hoge", nil}
-	}
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
-
-	assert.Equal(t, 20, count)
-}
-
-func TestWorker_no_write_to_out_chan(t *testing.T) {
-	q := Queue{
-		Wg:  &sync.WaitGroup{},
-		In:  make(chan *rssworker.RSSItem),
-		Out: make(chan *rssworker.RSSItem),
-		Task: func(item *rssworker.RSSItem) bool {
-			return false
-		},
-	}
-
-	for i := 0; i < 4; i++ {
-		q.Wg.Add(1)
-		go q.Start(i + 1)
-	}
-
-	wg := &sync.WaitGroup{}
-	mx := &sync.Mutex{}
-	count := 0
-
-	for i := 0; i < 2; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for _ = range q.Out {
-				mx.Lock()
-				count++
-				mx.Unlock()
-			}
-		}()
-	}
-
-	for i := 0; i < 20; i++ {
-		q.In <- &rssworker.RSSItem{"Hoge", "http://hoge", nil}
-	}
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
-
-	assert.Equal(t, 0, count)
 }

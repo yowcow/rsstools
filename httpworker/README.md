@@ -2,22 +2,15 @@ HTTP Get Request Worker
 =======================
 
 A worker that:
-+ reads RSS feed object `*httpworker.RssFeed` from channel `In`
++ reads RSS feed object `*httpworker.RSSFeed` from channel `in`
 + makes HTTP GET request and appends response body `io.Reader` to the object
-+ writes the object to channel `Out`
++ writes the object to channel `out`
 
 HOW TO USE
 ----------
 
 ```go
-httpQueue := httpworker.HttpQueue{
-    Wg:  &sync.WaitGroup{},
-    In:  make(chan *httpworker.RssFeed),
-    Out: make(chan *httpworker.RssFeed),
-}
-
-for i := 0; i < WORKER_COUNT; i++ {
-    httpQueue.Wg.Add(1)
-    go httpQueue.Start()
-}
+in := make(chan *httpworker.RSSFeed)
+q := httpworker.New(logger)
+out := q.Start(in, 10) // boot 10 workers
 ```

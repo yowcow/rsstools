@@ -1,63 +1,51 @@
 package broadcaster
 
 import (
-	"sync"
+	"bytes"
 	"testing"
 
+	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/itemworker"
 	"github.com/yowcow/rsstools/rssworker"
 )
 
 func TestBroadcaster(t *testing.T) {
-	q1Count := 0
-	iq1 := itemworker.Queue{
-		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RSSItem),
-		Task: func(item *rssworker.RSSItem) bool {
-			q1Count++
-			return false
-		},
+	logbuf := new(bytes.Buffer)
+	logger := log.New("")
+	//logger.SetLevel(log.ERROR)
+	logger.SetOutput(logbuf)
+	logger.SetHeader(`${level}`)
+
+	in := make(chan *rssworker.RSSItem)
+	bq := New(2)
+	outs := bq.Start(in, 4)
+
+	q1count := 0
+	fn1 := func(item *rssworker.RSSItem) bool {
+		q1count++
+		return false
 	}
+	q1 := itemworker.New("q1", fn1, logger)
+	q1.Start(outs[0], 4)
 
-	q2Count := 0
-	iq2 := itemworker.Queue{
-		Wg: &sync.WaitGroup{},
-		In: make(chan *rssworker.RSSItem),
-		Task: func(item *rssworker.RSSItem) bool {
-			q2Count++
-			return false
-		},
+	q2count := 0
+	fn2 := func(item *rssworker.RSSItem) bool {
+		q2count++
+		return false
 	}
-
-	iq1.Wg.Add(1)
-	go iq1.Start(1)
-
-	iq2.Wg.Add(1)
-	go iq2.Start(1)
-
-	bq := Queue{
-		Wg:   &sync.WaitGroup{},
-		In:   make(chan *rssworker.RSSItem),
-		Outs: []chan *rssworker.RSSItem{iq1.In, iq2.In},
-	}
-
-	bq.Wg.Add(1)
-	go bq.Start(1)
+	q2 := itemworker.New("q2", fn2, logger)
+	q2.Start(outs[1], 4)
 
 	for i := 0; i < 10; i++ {
-		bq.In <- &rssworker.RSSItem{"hoge", "fuga", nil}
+		in <- &rssworker.RSSItem{"hoge", "fuga", nil}
 	}
 
-	close(bq.In)
-	bq.Wg.Wait()
+	close(in)
+	bq.Finish()
+	q1.Finish()
+	q2.Finish()
 
-	close(iq1.In)
-	iq1.Wg.Wait()
-
-	close(iq2.In)
-	iq2.Wg.Wait()
-
-	assert.Equal(t, 10, q1Count)
-	assert.Equal(t, 10, q2Count)
+	assert.Equal(t, 10, q1count)
+	assert.Equal(t, 10, q2count)
 }

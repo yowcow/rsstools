@@ -3,7 +3,6 @@ package rssworker
 import (
 	"bytes"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/labstack/gommon/log"
@@ -41,58 +40,39 @@ var rssXML2 = `
 `
 
 func TestWorker_on_rss1(t *testing.T) {
-	logbuf := &bytes.Buffer{}
+	logbuf := new(bytes.Buffer)
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *httpworker.RSSFeed),
-		Out:    make(chan *RSSItem),
-		Logger: logger,
-	}
-
-	for i := 0; i < 4; i++ {
-		q.Wg.Add(1)
-		go q.Start(i + 1)
-	}
+	in := make(chan *httpworker.RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	result := map[string]int{}
-	mx := &sync.Mutex{}
-	wg := &sync.WaitGroup{}
-
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for item := range q.Out {
-				mx.Lock()
-				result[item.Link]++
-				mx.Unlock()
-
-				assert.Equal(t, false, item.Attr["foo_flg"])
-				assert.Equal(t, 1234, item.Attr["bar_count"])
-			}
-		}()
-	}
+	done := make(chan bool)
+	go func() {
+		for item := range out {
+			result[item.Link]++
+			assert.Equal(t, false, item.Attr["foo_flg"])
+			assert.Equal(t, 1234, item.Attr["bar_count"])
+		}
+		done <- true
+	}()
 
 	attr := httpworker.RSSAttr{
 		"foo_flg":   false,
 		"bar_count": 1234,
 	}
-
 	for i := 0; i < 10; i++ {
 		buf := bytes.NewBufferString(rssXML1)
-		feed := &httpworker.RSSFeed{"url", attr, buf}
-		q.In <- feed
+		in <- &httpworker.RSSFeed{"url", attr, buf}
 	}
 
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
@@ -102,56 +82,37 @@ func TestWorker_on_rss1(t *testing.T) {
 func TestWorker_on_rss2(t *testing.T) {
 	logbuf := &bytes.Buffer{}
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *httpworker.RSSFeed),
-		Out:    make(chan *RSSItem),
-		Logger: logger,
-	}
-
-	for i := 0; i < 4; i++ {
-		q.Wg.Add(1)
-		go q.Start(i + 1)
-	}
+	in := make(chan *httpworker.RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	result := map[string]int{}
-	mx := &sync.Mutex{}
-	wg := &sync.WaitGroup{}
-
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for item := range q.Out {
-				mx.Lock()
-				result[item.Link]++
-				mx.Unlock()
-
-				assert.Equal(t, true, item.Attr["foo_flg"])
-				assert.Equal(t, 1234, item.Attr["bar_count"])
-			}
-		}()
-	}
+	done := make(chan bool)
+	go func() {
+		for item := range out {
+			result[item.Link]++
+			assert.Equal(t, true, item.Attr["foo_flg"])
+			assert.Equal(t, 1234, item.Attr["bar_count"])
+		}
+		done <- true
+	}()
 
 	attr := httpworker.RSSAttr{
 		"foo_flg":   true,
 		"bar_count": 1234,
 	}
-
 	for i := 0; i < 10; i++ {
 		buf := bytes.NewBufferString(rssXML2)
-		feed := &httpworker.RSSFeed{"url", attr, buf}
-		q.In <- feed
+		in <- &httpworker.RSSFeed{"url", attr, buf}
 	}
 
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
@@ -161,39 +122,32 @@ func TestWorker_on_rss2(t *testing.T) {
 func TestWorker_on_invalid_xml(t *testing.T) {
 	logbuf := &bytes.Buffer{}
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *httpworker.RSSFeed),
-		Out:    make(chan *RSSItem),
-		Logger: logger,
-	}
+	in := make(chan *httpworker.RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	count := 0
-	q.Wg.Add(1)
-	go q.Start(1)
-
-	wg := &sync.WaitGroup{}
-	wg.Add(1)
-	go func(w *sync.WaitGroup, ch chan *RSSItem) {
-		defer w.Done()
-		for _ = range ch {
+	done := make(chan bool)
+	go func() {
+		for _ = range out {
 			count++
 		}
-	}(wg, q.Out)
+		done <- true
+	}()
 
 	rssbuf := bytes.NewBufferString("something has happened")
 	feed := &httpworker.RSSFeed{"http://something/rss", httpworker.RSSAttr{}, rssbuf}
-	q.In <- feed
-	q.In <- feed
 
-	close(q.In)
-	q.Wg.Wait()
+	in <- feed
+	in <- feed
 
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	assert.Equal(t, 0, count)
 	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
