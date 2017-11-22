@@ -5,8 +5,6 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"regexp"
-	"strings"
-	"sync"
 	"testing"
 	"time"
 
@@ -31,7 +29,7 @@ func httpErrorHandler(w http.ResponseWriter, req *http.Request) {
 }
 
 func httpTimeoutHandler(w http.ResponseWriter, req *http.Request) {
-	time.Sleep(time.Duration(TimeoutMillisecs) * time.Millisecond)
+	time.Sleep(time.Duration(TimeoutMillisecs+10) * time.Millisecond)
 	w.WriteHeader(http.StatusOK)
 	w.Write([]byte("OK"))
 }
@@ -40,66 +38,42 @@ func TestWorkerSucceeds(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(httpOKHandler))
 	defer server.Close()
 
-	logbuf := &bytes.Buffer{}
+	logbuf := new(bytes.Buffer)
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *RSSFeed),
-		Out:    make(chan *RSSFeed),
-		Logger: logger,
-		Client: &http.Client{},
-	}
-
-	for i := 0; i < 4; i++ {
-		q.Wg.Add(1)
-		go q.Start(i + 1)
-	}
+	in := make(chan *RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	count := 0
-	mx := &sync.Mutex{}
-	wg := &sync.WaitGroup{}
-
-	for i := 0; i < 4; i++ {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
-			for feed := range q.Out {
-				mx.Lock()
-				count++
-				mx.Unlock()
-
-				assert.Equal(t, true, feed.Attr["foo_flg"])
-				assert.Equal(t, 1234, feed.Attr["bar_count"])
-				assert.Equal(t, "ほげ", feed.Body.String())
-			}
-		}()
-	}
+	done := make(chan bool)
+	go func(out <-chan *RSSFeed, count *int, done chan<- bool) {
+		for feed := range out {
+			*count++
+			assert.Equal(t, true, feed.Attr["foo_flg"])
+			assert.Equal(t, 1234, feed.Attr["bar_count"])
+			assert.Equal(t, "ほげ", feed.Body.String())
+		}
+		done <- true
+	}(out, &count, done)
 
 	attr := RSSAttr{
 		"foo_flg":   true,
 		"bar_count": 1234,
 	}
-
 	for i := 0; i < 20; i++ {
-		feed := &RSSFeed{
-			URL:  server.URL,
-			Attr: attr,
-		}
-		q.In <- feed
+		in <- &RSSFeed{server.URL, attr, nil}
 	}
 
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	assert.Equal(t, 20, count)
 	assert.Equal(t, "", logbuf.String())
-	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
 }
 
 func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
@@ -108,52 +82,38 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 
 	logbuf := &bytes.Buffer{}
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *RSSFeed),
-		Out:    make(chan *RSSFeed),
-		Logger: logger,
-		Client: &http.Client{},
-	}
-
-	q.Wg.Add(1)
-	go q.Start(1)
+	in := make(chan *RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	count := 0
-	wg := &sync.WaitGroup{}
-
-	wg.Add(1)
-	go func(ch chan *RSSFeed) {
-		defer wg.Done()
-
-		for _ = range ch {
-			count++
+	done := make(chan bool)
+	go func(out <-chan *RSSFeed, count *int, done chan<- bool) {
+		for _ = range out {
+			*count++
 		}
-	}(q.Out)
+		done <- true
+	}(out, &count, done)
 
 	attr := RSSAttr{
 		"foo_flg":   true,
 		"bar_count": 1234,
 	}
+	feed := &RSSFeed{server.URL, attr, nil}
 
-	feed := &RSSFeed{
-		URL:  server.URL,
-		Attr: attr,
-	}
-	q.In <- feed
-	q.In <- feed
+	in <- feed
+	in <- feed
 
-	close(q.In)
-	q.Wg.Wait()
-
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	assert.Equal(t, 0, count)
-	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
+	assert.Equal(t, 3, len(bytes.Split(logbuf.Bytes(), []byte("\n"))))
 }
 
 func TestWorkerDoNothingOnTimeout(t *testing.T) {
@@ -162,45 +122,40 @@ func TestWorkerDoNothingOnTimeout(t *testing.T) {
 
 	logbuf := &bytes.Buffer{}
 	logger := log.New("")
+	logger.SetLevel(log.ERROR)
 	logger.SetOutput(logbuf)
 	logger.SetHeader(`${level}`)
 
-	q := Queue{
-		Wg:     &sync.WaitGroup{},
-		In:     make(chan *RSSFeed),
-		Out:    make(chan *RSSFeed),
-		Logger: logger,
-		Client: &http.Client{
-			Timeout: time.Duration(TimeoutMillisecs-10) * time.Millisecond,
-		},
+	createClient = func() *http.Client {
+		client := new(http.Client)
+		client.Timeout = time.Duration(TimeoutMillisecs) * time.Millisecond
+		return client
 	}
 
-	q.Wg.Add(1)
-	go q.Start(1)
+	in := make(chan *RSSFeed)
+	q := New(logger)
+	out := q.Start(in, 4)
 
 	count := 0
-	wg := &sync.WaitGroup{}
-
-	wg.Add(1)
-	go func(ch chan *RSSFeed) {
-		defer wg.Done()
-
-		for _ = range ch {
-			count++
+	done := make(chan bool)
+	go func(out <-chan *RSSFeed, count *int, done chan<- bool) {
+		for _ = range out {
+			*count++
 		}
-	}(q.Out)
+		done <- true
+	}(out, &count, done)
 
 	feed := &RSSFeed{
 		URL:  server.URL,
 		Attr: RSSAttr{},
 	}
-	q.In <- feed
 
-	close(q.In)
-	q.Wg.Wait()
+	in <- feed
+	in <- feed
 
-	close(q.Out)
-	wg.Wait()
+	close(in)
+	q.Finish()
+	<-done
 
 	re := regexp.MustCompile("request canceled")
 
