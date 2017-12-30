@@ -2,10 +2,10 @@ package rssworker
 
 import (
 	"encoding/xml"
+	"log"
 	"sync"
 
 	"github.com/yowcow/rsstools/httpworker"
-	"github.com/yowcow/rsstools/log"
 )
 
 var (
@@ -29,10 +29,10 @@ type RSS2 struct {
 type Queue struct {
 	wg     *sync.WaitGroup
 	out    chan *RSSItem
-	logger log.Logger
+	logger *log.Logger
 }
 
-func New(logger log.Logger) *Queue {
+func New(logger *log.Logger) *Queue {
 	return &Queue{
 		wg:     new(sync.WaitGroup),
 		out:    make(chan *RSSItem),
@@ -55,22 +55,22 @@ func (q Queue) Finish() {
 
 func (q Queue) runWorker(id int, in <-chan *httpworker.RSSFeed) {
 	defer func() {
-		q.logger.Infof("[rssworker %d] Finished", id)
+		q.logger.Printf("[rssworker %d] Finished", id)
 		q.wg.Done()
 	}()
-	q.logger.Infof("[rssworker %d] Started", id)
+	q.logger.Printf("[rssworker %d] Started", id)
 	for feed := range in {
 		rawxml := feed.Body.Bytes()
 
 		rss1, err := parseRSS1(rawxml)
 		if err != nil {
-			q.logger.Errorf("[rssworker %d] Failed parsing XML as RSS1: %s (%s)", id, err, feed.URL)
+			q.logger.Printf("[rssworker %d] Failed parsing XML as RSS1: %s (%s)", id, err, feed.URL)
 			continue
 		}
 
 		rss2, err := parseRSS2(rawxml)
 		if err != nil {
-			q.logger.Errorf("[rssworker %d] Failed parsing XML as RSS2: %s (%s)", id, err, feed.URL)
+			q.logger.Printf("[rssworker %d] Failed parsing XML as RSS2: %s (%s)", id, err, feed.URL)
 			continue
 		}
 

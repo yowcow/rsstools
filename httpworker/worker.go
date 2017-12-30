@@ -4,10 +4,9 @@ import (
 	"bytes"
 	"fmt"
 	"io"
+	"log"
 	"net/http"
 	"sync"
-
-	"github.com/yowcow/rsstools/log"
 )
 
 var (
@@ -24,11 +23,11 @@ type RSSFeed struct {
 
 type Queue struct {
 	out    chan *RSSFeed
-	logger log.Logger
+	logger *log.Logger
 	wg     *sync.WaitGroup
 }
 
-func New(logger log.Logger) *Queue {
+func New(logger *log.Logger) *Queue {
 	return &Queue{
 		out:    make(chan *RSSFeed),
 		logger: logger,
@@ -55,17 +54,17 @@ var createClient = func() *http.Client {
 
 func (q Queue) runWorker(id int, in <-chan *RSSFeed) {
 	defer func() {
-		q.logger.Infof("[httpworker %d] Finished", id)
+		q.logger.Printf("[httpworker %d] Finished", id)
 		q.wg.Done()
 	}()
 
-	q.logger.Infof("[httpworker %d] Started", id)
+	q.logger.Printf("[httpworker %d] Started", id)
 	client := createClient()
 
 	for feed := range in {
 		body, err := fetch(client, feed.URL)
 		if err != nil {
-			q.logger.Errorf("[httpworker %d] %s (%s)", id, err, feed.URL)
+			q.logger.Printf("[httpworker %d] %s (%s)", id, err, feed.URL)
 			continue
 		}
 		feed.Body = body

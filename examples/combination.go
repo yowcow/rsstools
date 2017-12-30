@@ -3,9 +3,9 @@ package main
 import (
 	"bytes"
 	"fmt"
+	"log"
 	"sync"
 
-	"github.com/labstack/gommon/log"
 	"github.com/yowcow/rsstools/broadcaster"
 	"github.com/yowcow/rsstools/httpworker"
 	"github.com/yowcow/rsstools/itemworker"
@@ -19,9 +19,7 @@ var feedUrls = []string{
 
 func main() {
 	logbuf := new(bytes.Buffer)
-	logger := log.New("")
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	// seed into http queue
 	httpin := make(chan *httpworker.RSSFeed)
@@ -40,7 +38,7 @@ func main() {
 
 	// logging queue
 	logqueue := itemworker.New("logging", func(item *rssworker.RSSItem) bool {
-		logger.Infof("Link: %s, Title: %s", item.Link, item.Title)
+		logger.Printf("Link: %s, Title: %s", item.Link, item.Title)
 		return false
 	}, logger)
 	logqueue.Start(bcastout[0], 4)

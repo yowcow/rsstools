@@ -1,9 +1,9 @@
 package itemworker
 
 import (
+	"log"
 	"sync"
 
-	"github.com/yowcow/rsstools/log"
 	"github.com/yowcow/rsstools/rssworker"
 )
 
@@ -14,10 +14,10 @@ type Queue struct {
 	task   RSSItemTask
 	wg     *sync.WaitGroup
 	out    chan *rssworker.RSSItem
-	logger log.Logger
+	logger *log.Logger
 }
 
-func New(name string, task RSSItemTask, logger log.Logger) *Queue {
+func New(name string, task RSSItemTask, logger *log.Logger) *Queue {
 	return &Queue{
 		name:   name,
 		task:   task,
@@ -42,10 +42,10 @@ func (q Queue) Finish() {
 
 func (q Queue) runWorker(id int, in <-chan *rssworker.RSSItem) {
 	defer func() {
-		q.logger.Infof("[itemworker %d (%s)] Finished", id, q.name)
+		q.logger.Printf("[itemworker %d (%s)] Finished", id, q.name)
 		q.wg.Done()
 	}()
-	q.logger.Infof("[itemworker %d (%s)] Started", id, q.name)
+	q.logger.Printf("[itemworker %d (%s)] Started", id, q.name)
 	for item := range in {
 		if q.task(item) {
 			q.out <- item

@@ -2,13 +2,12 @@ package httpworker
 
 import (
 	"bytes"
+	"log"
 	"net/http"
 	"net/http/httptest"
-	"regexp"
 	"testing"
 	"time"
 
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -39,10 +38,7 @@ func TestWorkerSucceeds(t *testing.T) {
 	defer server.Close()
 
 	logbuf := new(bytes.Buffer)
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *RSSFeed)
 	q := New(logger)
@@ -73,7 +69,6 @@ func TestWorkerSucceeds(t *testing.T) {
 	<-done
 
 	assert.Equal(t, 20, count)
-	assert.Equal(t, "", logbuf.String())
 }
 
 func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
@@ -81,10 +76,7 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	defer server.Close()
 
 	logbuf := &bytes.Buffer{}
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *RSSFeed)
 	q := New(logger)
@@ -113,7 +105,6 @@ func TestWorkerDoNothingOnRequestFailure(t *testing.T) {
 	<-done
 
 	assert.Equal(t, 0, count)
-	assert.Equal(t, 3, len(bytes.Split(logbuf.Bytes(), []byte("\n"))))
 }
 
 func TestWorkerDoNothingOnTimeout(t *testing.T) {
@@ -121,10 +112,7 @@ func TestWorkerDoNothingOnTimeout(t *testing.T) {
 	defer server.Close()
 
 	logbuf := &bytes.Buffer{}
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	createClient = func() *http.Client {
 		client := new(http.Client)
@@ -157,8 +145,5 @@ func TestWorkerDoNothingOnTimeout(t *testing.T) {
 	q.Finish()
 	<-done
 
-	re := regexp.MustCompile("request canceled")
-
 	assert.Equal(t, 0, count)
-	assert.True(t, re.Match(logbuf.Bytes()))
 }

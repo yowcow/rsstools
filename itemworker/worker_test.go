@@ -2,11 +2,9 @@ package itemworker
 
 import (
 	"bytes"
-	_ "fmt"
-	_ "sync"
+	"log"
 	"testing"
 
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/rssworker"
 )
@@ -48,10 +46,7 @@ func TestWorker_writes_to_out_chan(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.subtest, func(t *testing.T) {
 			logbuf := new(bytes.Buffer)
-			logger := log.New("")
-			logger.SetLevel(log.ERROR)
-			logger.SetOutput(logbuf)
-			logger.SetHeader(`${level}`)
+			logger := log.New(logbuf, "", 0)
 
 			in := make(chan *rssworker.RSSItem)
 			q := New(c.input.name, c.input.fn, logger)

@@ -2,10 +2,9 @@ package rssworker
 
 import (
 	"bytes"
-	"strings"
+	"log"
 	"testing"
 
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/httpworker"
 )
@@ -41,10 +40,7 @@ var rssXML2 = `
 
 func TestWorker_on_rss1(t *testing.T) {
 	logbuf := new(bytes.Buffer)
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *httpworker.RSSFeed)
 	q := New(logger)
@@ -76,15 +72,11 @@ func TestWorker_on_rss1(t *testing.T) {
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
-	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
 }
 
 func TestWorker_on_rss2(t *testing.T) {
 	logbuf := &bytes.Buffer{}
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *httpworker.RSSFeed)
 	q := New(logger)
@@ -116,15 +108,11 @@ func TestWorker_on_rss2(t *testing.T) {
 
 	assert.Equal(t, 10, result["http://foobar"])
 	assert.Equal(t, 10, result["http://hogefuga"])
-	assert.Equal(t, 1, len(strings.Split(logbuf.String(), "\n")))
 }
 
 func TestWorker_on_invalid_xml(t *testing.T) {
 	logbuf := &bytes.Buffer{}
-	logger := log.New("")
-	logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *httpworker.RSSFeed)
 	q := New(logger)
@@ -150,5 +138,4 @@ func TestWorker_on_invalid_xml(t *testing.T) {
 	<-done
 
 	assert.Equal(t, 0, count)
-	assert.Equal(t, 3, len(strings.Split(logbuf.String(), "\n")))
 }

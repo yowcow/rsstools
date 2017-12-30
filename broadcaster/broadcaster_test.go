@@ -2,9 +2,9 @@ package broadcaster
 
 import (
 	"bytes"
+	"log"
 	"testing"
 
-	"github.com/labstack/gommon/log"
 	"github.com/stretchr/testify/assert"
 	"github.com/yowcow/rsstools/itemworker"
 	"github.com/yowcow/rsstools/rssworker"
@@ -12,10 +12,7 @@ import (
 
 func TestBroadcaster(t *testing.T) {
 	logbuf := new(bytes.Buffer)
-	logger := log.New("")
-	//logger.SetLevel(log.ERROR)
-	logger.SetOutput(logbuf)
-	logger.SetHeader(`${level}`)
+	logger := log.New(logbuf, "", 0)
 
 	in := make(chan *rssworker.RSSItem)
 	bq := New(2)
